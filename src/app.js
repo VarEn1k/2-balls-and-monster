@@ -85,7 +85,10 @@ class App {
             const inputSources = session.inputSources;
 
             this.counter =+ this.clock.getDelta()
-            if (this.counter)
+            if (this.counter > 0.1) {
+                this.counter = 0
+                this.getInputSources = true
+            }
             if (this.getInputSources) {
                 const info = [];
 
