@@ -1,8 +1,12 @@
 import * as THREE from 'three';
 import {VRButton} from "three/addons/webxr/VRButton";
 import {BoxLineGeometry} from "three/addons/geometries/BoxLineGeometry";
+import {XRControllerModelFactory} from "three/examples/jsm/webxr/XRControllerModelFactory";
+import monster from "../assets/monster.glb"
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 
 class App {
+    buttonStates;
     constructor() {
         const container = document.createElement('div');
         document.body.appendChild(container);
@@ -40,6 +44,9 @@ class App {
         window.addEventListener('resize', this.resize.bind(this));
 
         this.renderer.setAnimationLoop(this.render.bind(this));
+
+        this.grip = []
+
     }
 
     random(min, max) {
@@ -65,9 +72,42 @@ class App {
 
         this.room.geometry.translate(0, 3, 0);
         this.scene.add(this.room);
+
+
+        this.loadAsset(monster, 0, 3, 0, scene => {
+            const self = this
+            const scale = 0.2
+            scene.scale.set(scale, scale, scale)
+            self.monster = scene
+        })
     }
 
+    loadAsset(glbObject, x, y, z, sceneHandler) {
+        const self = this
+        const loader = new GLTFLoader()
+        loader.load(glbObject, (gltf) => {
+                const scene = gltf.scene
+                self.scene.add(scene)
+                scene.position.set(0, 1.6, -1)
+                sceneHandler(scene)
+            },
+            null,
+            (error) => console.error(`An error happened: ${error}`)
+        )
+    }
+
+
     setupXR() {
+        const grip = this.renderer.xr.getControllerGrip(0)
+        grip.add(new XRControllerModelFactory().createControllerModel(grip))
+        this.scene.add(grip)
+
+        const grip1 = this.renderer.xr.getControllerGrip(1)
+        grip1.add(new XRControllerModelFactory().createControllerModel(grip1))
+        this.scene.add(grip1)
+
+
+
         this.renderer.xr.enabled = true;
 
         document.body.appendChild(VRButton.createButton(this.renderer));
@@ -122,7 +162,13 @@ class App {
                     const btnPressed = gp.buttons[btnIndex].pressed;
                     const material = (btnPressed) ? this.materials[1] : this.materials[0];
                     if (inputSource.handedness == 'right') {
-                        this.rsphere.position.set(0.5, 1.6, -1).add(this.vec3.set(gp.axes[offset], -gp.axes[offset + 1], 0));
+                        const deltaX = gp.axes[offset]
+                        const deltaY = gp.axes[offset+1]
+                        if(this.monster){
+                        this.monster.rotateY(Math.PI / 180 * deltaX)
+
+                        }
+                        this.rsphere.position.set(0.5, 1.6, -1).add(this.vec3.set(deltaX, -deltaY, 0));
                         this.rsphere.material = material;
                     } else if (inputSource.handedness == 'left') {
                         this.lsphere.position.set(-0.5, 1.6, -1).add(this.vec3.set(gp.axes[offset], -gp.axes[offset + 1], 0));
