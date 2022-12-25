@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import {VRButton} from "three/addons/webxr/VRButton";
 import {BoxLineGeometry} from "three/addons/geometries/BoxLineGeometry";
 import {XRControllerModelFactory} from "three/examples/jsm/webxr/XRControllerModelFactory";
-import monster from "../assets/monster.glb"
+ import monster from "../assets/monster2.glb"
+// import monster from "../assets/tree.glb"
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 
 class App {
-    buttonStates;
+    currentScale;
     constructor() {
         const container = document.createElement('div');
         document.body.appendChild(container);
@@ -76,7 +77,7 @@ class App {
 
         this.loadAsset(monster, 0, 3, 0, scene => {
             const self = this
-            const scale = 0.2
+            const scale = 2
             scene.scale.set(scale, scale, scale)
             self.monster = scene
         })
@@ -106,7 +107,12 @@ class App {
         grip1.add(new XRControllerModelFactory().createControllerModel(grip1))
         this.scene.add(grip1)
 
+        const self = this
 
+        grip.addEventListener('squeezestart', () => {
+            self.monster.position.set(0, 1.6, -1)
+            self.monster.scale.set(2,2,2)
+        })
 
         this.renderer.xr.enabled = true;
 
@@ -129,6 +135,7 @@ class App {
                 this.counter = 0
                 this.getInputSources = true
             }
+
             if (this.getInputSources) {
                 const info = [];
 
@@ -161,24 +168,50 @@ class App {
                     const btnIndex = (thumbstick) ? 3 : 2;
                     const btnPressed = gp.buttons[btnIndex].pressed;
                     const material = (btnPressed) ? this.materials[1] : this.materials[0];
-                    if (inputSource.handedness == 'right') {
-                        const deltaX = gp.axes[offset]
-                        const deltaY = gp.axes[offset+1]
-                        if(this.monster){
-                        this.monster.rotateY(Math.PI / 180 * deltaX)
+                    const deltaX = gp.axes[offset]
+                    const deltaY = gp.axes[offset+1]
 
-                        }
+                    if (inputSource.handedness == 'right') {
                         this.rsphere.position.set(0.5, 1.6, -1).add(this.vec3.set(deltaX, -deltaY, 0));
                         this.rsphere.material = material;
+                        this.rightStick(deltaX, deltaY, btnPressed)
                     } else if (inputSource.handedness == 'left') {
-                        this.lsphere.position.set(-0.5, 1.6, -1).add(this.vec3.set(gp.axes[offset], -gp.axes[offset + 1], 0));
+                        this.lsphere.position.set(-0.5, 1.6, -1).add(this.vec3.set(deltaX, -deltaY, 0));
                         this.lsphere.material = material;
+                        this.leftStick(deltaX, deltaY, btnPressed)
                     }
                 })
             }
         }
         this.renderer.render(this.scene, this.camera);
     }
+
+    rightStick(deltaX, deltaY, buttonPressed) {
+        if (monster && buttonPressed) {
+            // Zoom models
+            const currentScale = this.monster.scale.x
+            let scale
+            if (deltaY >= 0) {
+                scale = currentScale * (1 + .2 * deltaY)
+            } else {
+                scale = currentScale / (1 - .2 * deltaY)
+            }
+            this.monster.scale.set(scale, scale, scale)
+
+        } else if(this.monster) {
+            // Rotate model
+            this.monster.rotateY(Math.PI / 180 * 10 * deltaX)
+            this.monster.rotateZ(Math.PI / 180 * 10 * deltaY)
+        }
+    }
+
+    leftStick(deltaX, deltaY, buttonPressed) {
+        if (monster && buttonPressed) {
+            this.monster.position.add(this.vec3.set(.05 * deltaX, .05 * deltaY, 0))
+        } else if (this.monster) {
+            this.monster.position.add(this.vec3.set(.05 * deltaX, 0, .05 * deltaY))
+        }
+      }
 }
 
 export {App};
